@@ -17,13 +17,16 @@ SOURCES += main.cpp\
     controlarea.cpp \
     grapharea.cpp \
     graphwidget.cpp \
-    tracelogstore.cpp
+    tracelogstore.cpp \
+    pidgraphdata.cpp
 
 HEADERS  += mainwindow.h \
     controlarea.h \
     grapharea.h \
     graphwidget.h \
-    tracelogstore.h
+    tracelogstore.h \
+    igraphdata.h \
+    pidgraphdata.h
 
 FORMS    += mainwindow.ui \
     controlarea.ui \

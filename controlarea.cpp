@@ -20,7 +20,7 @@ int constrain(int val, int min, int max) {
 ControlArea::ControlArea(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::ControlArea),
-    timer(this)
+    timer(this), main(NULL), data(NULL)
 {
     ui->setupUi(this);
     throttle = pitch = roll = yaw = 0;
@@ -53,9 +53,20 @@ void ControlArea::sendRCData()
     }
 }
 
+void ControlArea::onDataChanged()
+{
+    update();
+}
+
 
 void ControlArea::setMain(MainWindow* main) {
     this->main = main;
+}
+
+void ControlArea::setData(TraceLogStore *data)
+{
+    this->data = data;
+    connect(data, SIGNAL(recordChanged()), this, SLOT(onDataChanged()));
 }
 
 void ControlArea::setDebugData(int fbThrottle, int fbPitch,
@@ -106,7 +117,7 @@ void ControlArea::paintEvent(QPaintEvent* event)
         size = height();
     }
 
-    float w, h;
+    float w, h, value;
     int tw, th;
 
     // Draw frame
@@ -120,132 +131,137 @@ void ControlArea::paintEvent(QPaintEvent* event)
     float mid = size/4.0;
     QString text;
 
-    // Pitch
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(QColor(Qt::black));
-    painter.drawEllipse(
-                width()/2.0 - mid - radius,
-                height()/2.0 - mid - radius,
-                radius*2, radius*2);
+    if (data) {
+        // Pitch
+        value = data->getCurrentRecord().pitch;
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QColor(Qt::black));
+        painter.drawEllipse(
+                    width()/2.0 - mid - radius,
+                    height()/2.0 - mid - radius,
+                    radius*2, radius*2);
 
-    painter.setPen(QColor(160, 160, 160));
-    painter.setFont(QFont("MS Shell Dlg 2", size/20));
-    text = "Pitch";
-    w = painter.fontMetrics().width(text);
-    h = painter.fontMetrics().height();
-    painter.drawText(width()/2.0 - mid - w/2.0,
-                     height()/2.0 - mid - radius/2.0 + h/2.0, text);
-    painter.setPen(QColor(0, 160, 160));
-    painter.setFont(QFont("MS Shell Dlg 2", size/30));
-    text = QString::number(qRound(rPitch/10.0));
-    w = painter.fontMetrics().width(text);
-    h = painter.fontMetrics().height();
-    text += "°";
-    painter.drawText(width()/2.0 - mid - w/2.0,
-                     height()/2.0 - mid + radius/3.0 + h/2.0, text);
+        painter.setPen(QColor(160, 160, 160));
+        painter.setFont(QFont("MS Shell Dlg 2", size/20));
+        text = "Pitch";
+        w = painter.fontMetrics().width(text);
+        h = painter.fontMetrics().height();
+        painter.drawText(width()/2.0 - mid - w/2.0,
+                         height()/2.0 - mid - radius/2.0 + h/2.0, text);
+        painter.setPen(QColor(0, 160, 160));
+        painter.setFont(QFont("MS Shell Dlg 2", size/30));
+        text = QString::number(qRound(value));
+        w = painter.fontMetrics().width(text);
+        h = painter.fontMetrics().height();
+        text += "°";
+        painter.drawText(width()/2.0 - mid - w/2.0,
+                         height()/2.0 - mid + radius/3.0 + h/2.0, text);
 
-    painter.setPen(QPen(QColor(Qt::black), 3));
-    xB = width()/2.0 - mid + radius*cos(-rPitch*M_PI/1800);
-    xE = width()/2.0 - mid - radius*cos(-rPitch*M_PI/1800);
-    yB = height()/2.0 - mid + radius*sin(-rPitch*M_PI/1800);
-    yE = height()/2.0 - mid - radius*sin(-rPitch*M_PI/1800);
-    painter.drawLine(xB, yB, xE, yE);
-    xB = width()/2.0 - mid - radius*5/7*cos(-rPitch*M_PI/1800);
-    yB = height()/2.0 - mid - radius*5/7*sin(-rPitch*M_PI/1800);
-    xE = width()/2.0 - mid + radius*6/7*cos((-rPitch-1600)*M_PI/1800);
-    yE = height()/2.0 - mid + radius*6/7*sin((-rPitch-1600)*M_PI/1800);
-    painter.drawLine(xB, yB, xE, yE);
-    painter.setBrush(QBrush(QColor(Qt::black), Qt::SolidPattern));
-    painter.setPen(QPen(QColor(Qt::black), 1));
-    painter.drawEllipse(
-                width()/2.0 - mid - radius/30.0,
-                height()/2.0 - mid - radius/30.0,
-                radius*2/30.0, radius*2/30.0);
+        painter.setPen(QPen(QColor(Qt::black), 3));
+        xB = width()/2.0 - mid + radius*cos(-value*M_PI/180);
+        xE = width()/2.0 - mid - radius*cos(-value*M_PI/180);
+        yB = height()/2.0 - mid + radius*sin(-value*M_PI/180);
+        yE = height()/2.0 - mid - radius*sin(-value*M_PI/180);
+        painter.drawLine(xB, yB, xE, yE);
+        xB = width()/2.0 - mid - radius*5/7*cos(-value*M_PI/180);
+        yB = height()/2.0 - mid - radius*5/7*sin(-value*M_PI/180);
+        xE = width()/2.0 - mid + radius*6/7*cos((-value-160)*M_PI/180);
+        yE = height()/2.0 - mid + radius*6/7*sin((-value-160)*M_PI/180);
+        painter.drawLine(xB, yB, xE, yE);
+        painter.setBrush(QBrush(QColor(Qt::black), Qt::SolidPattern));
+        painter.setPen(QPen(QColor(Qt::black), 1));
+        painter.drawEllipse(
+                    width()/2.0 - mid - radius/30.0,
+                    height()/2.0 - mid - radius/30.0,
+                    radius*2/30.0, radius*2/30.0);
 
-    // Roll
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(QColor(Qt::black));
-    painter.drawEllipse(
-                width()/2.0 + mid - radius,
-                height()/2.0 - mid - radius,
-                radius*2, radius*2);
+        // Roll
+        value = data->getCurrentRecord().roll;
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QColor(Qt::black));
+        painter.drawEllipse(
+                    width()/2.0 + mid - radius,
+                    height()/2.0 - mid - radius,
+                    radius*2, radius*2);
 
-    painter.setPen(QColor(160, 160, 160));
-    painter.setFont(QFont("MS Shell Dlg 2", size/20));
-    text = "Roll";
-    w = painter.fontMetrics().width(text);
-    h = painter.fontMetrics().height();
-    painter.drawText(width()/2.0 + mid - w/2.0,
-                     height()/2.0 - mid - radius/2.0 + h/2.0, text);
-    painter.setPen(QColor(0, 160, 160));
-    painter.setFont(QFont("MS Shell Dlg 2", size/30));
-    text = QString::number(qRound(rRoll/10.0));
-    w = painter.fontMetrics().width(text);
-    h = painter.fontMetrics().height();
-    text += "°";
-    painter.drawText(width()/2.0 + mid - w/2.0,
-                     height()/2.0 - mid + radius/3.0 + h/2.0, text);
+        painter.setPen(QColor(160, 160, 160));
+        painter.setFont(QFont("MS Shell Dlg 2", size/20));
+        text = "Roll";
+        w = painter.fontMetrics().width(text);
+        h = painter.fontMetrics().height();
+        painter.drawText(width()/2.0 + mid - w/2.0,
+                         height()/2.0 - mid - radius/2.0 + h/2.0, text);
+        painter.setPen(QColor(0, 160, 160));
+        painter.setFont(QFont("MS Shell Dlg 2", size/30));
+        text = QString::number(qRound(value));
+        w = painter.fontMetrics().width(text);
+        h = painter.fontMetrics().height();
+        text += "°";
+        painter.drawText(width()/2.0 + mid - w/2.0,
+                         height()/2.0 - mid + radius/3.0 + h/2.0, text);
 
-    painter.setPen(QPen(QColor(Qt::black), 3));
-    xB = width()/2.0 + mid + radius*cos(rRoll*M_PI/1800);
-    xE = width()/2.0 + mid - radius*cos(rRoll*M_PI/1800);
-    yB = height()/2.0 - mid + radius*sin(rRoll*M_PI/1800);
-    yE = height()/2.0 - mid - radius*sin(rRoll*M_PI/1800);
-    painter.drawLine(xB, yB, xE, yE);
-    xB = width()/2.0 + mid;
-    yB = height()/2.0 - mid;
-    xE = width()/2.0 + mid + radius/4*cos((rRoll-900)*M_PI/1800);
-    yE = height()/2.0 - mid + radius/4*sin((rRoll-900)*M_PI/1800);
-    painter.drawLine(xB, yB, xE, yE);
-    painter.setBrush(QBrush(QColor(Qt::black), Qt::SolidPattern));
-    painter.setPen(QPen(QColor(Qt::black), 1));
-    painter.drawEllipse(
-                width()/2.0 + mid - radius/30.0,
-                height()/2.0 - mid - radius/30.0,
-                radius*2/30.0, radius*2/30.0);
+        painter.setPen(QPen(QColor(Qt::black), 3));
+        xB = width()/2.0 + mid + radius*cos(value*M_PI/180);
+        xE = width()/2.0 + mid - radius*cos(value*M_PI/180);
+        yB = height()/2.0 - mid + radius*sin(value*M_PI/180);
+        yE = height()/2.0 - mid - radius*sin(value*M_PI/180);
+        painter.drawLine(xB, yB, xE, yE);
+        xB = width()/2.0 + mid;
+        yB = height()/2.0 - mid;
+        xE = width()/2.0 + mid + radius/4*cos((value-90)*M_PI/180);
+        yE = height()/2.0 - mid + radius/4*sin((value-90)*M_PI/180);
+        painter.drawLine(xB, yB, xE, yE);
+        painter.setBrush(QBrush(QColor(Qt::black), Qt::SolidPattern));
+        painter.setPen(QPen(QColor(Qt::black), 1));
+        painter.drawEllipse(
+                    width()/2.0 + mid - radius/30.0,
+                    height()/2.0 - mid - radius/30.0,
+                    radius*2/30.0, radius*2/30.0);
 
-    // Yaw
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(QColor(Qt::black));
-    painter.drawEllipse(
-                width()/2.0 - mid - radius,
-                height()/2.0 + mid - radius,
-                radius*2, radius*2);
+        // Yaw
+        value = data->getCurrentRecord().yaw;
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QColor(Qt::black));
+        painter.drawEllipse(
+                    width()/2.0 - mid - radius,
+                    height()/2.0 + mid - radius,
+                    radius*2, radius*2);
 
-    painter.setPen(QColor(160, 160, 160));
-    painter.setFont(QFont("MS Shell Dlg 2", size/20));
-    text = "Yaw";
-    w = painter.fontMetrics().width(text);
-    h = painter.fontMetrics().height();
-    painter.drawText(width()/2.0 - mid - w/2.0,
-                     height()/2.0 + mid - radius/2.0 + h/2.0, text);
-    painter.setPen(QColor(0, 160, 160));
-    painter.setFont(QFont("MS Shell Dlg 2", size/30));
-    text = QString::number(qRound(rYaw/10.0));
-    w = painter.fontMetrics().width(text);
-    h = painter.fontMetrics().height();
-    text += "°";
-    painter.drawText(width()/2.0 - mid - w/2.0,
-                     height()/2.0 + mid + radius/3.0 + h/2.0, text);
+        painter.setPen(QColor(160, 160, 160));
+        painter.setFont(QFont("MS Shell Dlg 2", size/20));
+        text = "Yaw";
+        w = painter.fontMetrics().width(text);
+        h = painter.fontMetrics().height();
+        painter.drawText(width()/2.0 - mid - w/2.0,
+                         height()/2.0 + mid - radius/2.0 + h/2.0, text);
+        painter.setPen(QColor(0, 160, 160));
+        painter.setFont(QFont("MS Shell Dlg 2", size/30));
+        text = QString::number(qRound(value));
+        w = painter.fontMetrics().width(text);
+        h = painter.fontMetrics().height();
+        text += "°";
+        painter.drawText(width()/2.0 - mid - w/2.0,
+                         height()/2.0 + mid + radius/3.0 + h/2.0, text);
 
-    painter.setPen(QPen(QColor(Qt::black), 3));
-    xB = width()/2.0 - mid + radius*cos(-(rYaw+900)*M_PI/1800);
-    xE = width()/2.0 - mid - radius*cos(-(rYaw+900)*M_PI/1800);
-    yB = height()/2.0 + mid + radius*sin(-(rYaw+900)*M_PI/1800);
-    yE = height()/2.0 + mid - radius*sin(-(rYaw+900)*M_PI/1800);
-    painter.drawLine(xB, yB, xE, yE);
-    xE = width()/2.0 - mid + radius*6/7*cos((-(rYaw+900)-100)*M_PI/1800);
-    yE = height()/2.0 + mid + radius*6/7*sin((-(rYaw+900)-100)*M_PI/1800);
-    painter.drawLine(xB, yB, xE, yE);
-    xE = width()/2.0 - mid + radius*6/7*cos((-(rYaw+900)+100)*M_PI/1800);
-    yE = height()/2.0 + mid + radius*6/7*sin((-(rYaw+900)+100)*M_PI/1800);
-    painter.drawLine(xB, yB, xE, yE);
-    painter.setBrush(QBrush(QColor(Qt::black), Qt::SolidPattern));
-    painter.setPen(QPen(QColor(Qt::black), 1));
-    painter.drawEllipse(
-                width()/2.0 - mid - radius/30.0,
-                height()/2.0 + mid - radius/30.0,
-                radius*2/30.0, radius*2/30.0);
+        painter.setPen(QPen(QColor(Qt::black), 3));
+        xB = width()/2.0 - mid + radius*cos(-(value+90)*M_PI/180);
+        xE = width()/2.0 - mid - radius*cos(-(value+90)*M_PI/180);
+        yB = height()/2.0 + mid + radius*sin(-(value+90)*M_PI/180);
+        yE = height()/2.0 + mid - radius*sin(-(value+90)*M_PI/180);
+        painter.drawLine(xB, yB, xE, yE);
+        xE = width()/2.0 - mid + radius*6/7*cos((-(value+90)-10)*M_PI/180);
+        yE = height()/2.0 + mid + radius*6/7*sin((-(value+90)-10)*M_PI/180);
+        painter.drawLine(xB, yB, xE, yE);
+        xE = width()/2.0 - mid + radius*6/7*cos((-(value+90)+10)*M_PI/180);
+        yE = height()/2.0 + mid + radius*6/7*sin((-(value+90)+10)*M_PI/180);
+        painter.drawLine(xB, yB, xE, yE);
+        painter.setBrush(QBrush(QColor(Qt::black), Qt::SolidPattern));
+        painter.setPen(QPen(QColor(Qt::black), 1));
+        painter.drawEllipse(
+                    width()/2.0 - mid - radius/30.0,
+                    height()/2.0 + mid - radius/30.0,
+                    radius*2/30.0, radius*2/30.0);
+    }
 
 
     // Thtottle & Motors
@@ -262,12 +278,24 @@ void ControlArea::paintEvent(QPaintEvent* event)
     painter.drawRect(rect);
 
     // Feedback Thtottle
-    painter.setBrush(QBrush(powerFillColor, Qt::SolidPattern));
-    painter.setPen(powerFillColor);
-    xB++;
-    yB += (1000.0-fbThrottle)*(size/2.0-2)/1000.0 + 1;
-    rect.setRect(xB, yB, w-2, fbThrottle*(size/2.0-2)/1000.0);
-    painter.drawRect(rect);
+    if (data) {
+        value = data->getCurrentRecord().rcThrottle;
+        painter.setBrush(QBrush(powerFillColor, Qt::SolidPattern));
+        painter.setPen(powerFillColor);
+        xB++;
+        yB += (100.0-value)*(size/2.0-2)/100.0 + 1;
+        rect.setRect(xB, yB, w-2, value*(size/2.0-2)/100.0);
+        painter.drawRect(rect);
+
+        // Percent
+        painter.setPen(powerTextColor);
+        painter.setFont(QFont("MS Shell Dlg 2", size/50));
+        text = QString::number(qRound(value)) + "%";
+        tw = painter.fontMetrics().width(text);
+        th = painter.fontMetrics().height();
+        painter.drawText(xB + w/2.0 - 1 - tw/2.0,
+                         height()/2.0 + mid + th, text);
+    }
 
     // Sent Thtottle
     painter.setPen(QPen(QColor(Qt::black), 2));
@@ -283,21 +311,16 @@ void ControlArea::paintEvent(QPaintEvent* event)
     painter.drawText(xB + w/2.0 - 1 - tw/2.0,
                      height()/2.0 + mid, text);
 
-    painter.setPen(powerTextColor);
-    painter.setFont(QFont("MS Shell Dlg 2", size/50));
-    text = QString::number(qRound(fbThrottle/10.0)) + "%";
-    tw = painter.fontMetrics().width(text);
-    th = painter.fontMetrics().height();
-    painter.drawText(xB + w/2.0 - 1 - tw/2.0,
-                     height()/2.0 + mid + th, text);
 
     // Motors
-    if (motorFL >= 0 && motorFR >= 0 && motorBL >= 0 && motorBR >= 0) {
+    //if (true/*motorFL >= 0 && motorFR >= 0 && motorBL >= 0 && motorBR >= 0*/) {
+    if (data) {
         h = mid*4/5.0;
         w = mid/4.0;
         radius = mid/2.0;
 
         // Front Left
+        value = data->getCurrentRecord().motorFL;
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QColor(Qt::black));
         xB = width()/2.0 + mid - radius - w/2.0;
@@ -308,19 +331,20 @@ void ControlArea::paintEvent(QPaintEvent* event)
         painter.setBrush(QBrush(powerFillColor, Qt::SolidPattern));
         painter.setPen(powerFillColor);
         xB++;
-        yB += (1000 - motorFL)*(h-2)/1000 + 1;
-        rect.setRect(xB, yB, w-2, motorFL*(h-2)/1000);
+        yB += (100 - value)*(h-2)/100 + 1;
+        rect.setRect(xB, yB, w-2, value*(h-2)/100);
         painter.drawRect(rect);
 
         painter.setPen(powerTextColor);
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(qRound(motorFL/10.0)) + "%";
+        text = QString::number(qRound(value)) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid - radius - tw/2.0,
                          height()/2.0 + mid - radius + th/2.0, text);
 
         // Front Right
+        value = data->getCurrentRecord().motorFR;
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QColor(Qt::black));
         xB = width()/2.0 + mid + radius - w/2.0;
@@ -331,19 +355,20 @@ void ControlArea::paintEvent(QPaintEvent* event)
         painter.setBrush(QBrush(powerFillColor, Qt::SolidPattern));
         painter.setPen(powerFillColor);
         xB++;
-        yB += (1000 - motorFR)*(h-2)/1000 + 1;
-        rect.setRect(xB, yB, w-2, motorFR*(h-2)/1000);
+        yB += (100 - value)*(h-2)/100 + 1;
+        rect.setRect(xB, yB, w-2, value*(h-2)/100);
         painter.drawRect(rect);
 
         painter.setPen(powerTextColor);
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(qRound(motorFR/10.0)) + "%";
+        text = QString::number(qRound(value)) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid + radius - tw/2.0,
                          height()/2.0 + mid - radius + th/2.0, text);
 
         // Back Left
+        value = data->getCurrentRecord().motorBL;
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QColor(Qt::black));
         xB = width()/2.0 + mid - radius - w/2.0;
@@ -354,19 +379,20 @@ void ControlArea::paintEvent(QPaintEvent* event)
         painter.setBrush(QBrush(powerFillColor, Qt::SolidPattern));
         painter.setPen(powerFillColor);
         xB++;
-        yB += (1000 - motorBL)*(h-2)/1000 + 1;
-        rect.setRect(xB, yB, w-2, motorBL*(h-2)/1000);
+        yB += (100 - value)*(h-2)/100 + 1;
+        rect.setRect(xB, yB, w-2, value*(h-2)/100);
         painter.drawRect(rect);
 
         painter.setPen(powerTextColor);
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(qRound(motorBL/10.0)) + "%";
+        text = QString::number(qRound(value)) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid - radius - tw/2.0,
                          height()/2.0 + mid + radius + th/2.0, text);
 
         // Back Right
+        value = data->getCurrentRecord().motorBR;
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QColor(Qt::black));
         xB = width()/2.0 + mid + radius - w/2.0;
@@ -377,13 +403,13 @@ void ControlArea::paintEvent(QPaintEvent* event)
         painter.setBrush(QBrush(powerFillColor, Qt::SolidPattern));
         painter.setPen(powerFillColor);
         xB++;
-        yB += (1000 - motorBR)*(h-2)/1000 + 1;
-        rect.setRect(xB, yB, w-2, motorBR*(h-2)/1000);
+        yB += (100 - value)*(h-2)/100 + 1;
+        rect.setRect(xB, yB, w-2, value*(h-2)/100);
         painter.drawRect(rect);
 
         painter.setPen(powerTextColor);
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(qRound(motorBR/10.0)) + "%";
+        text = QString::number(qRound(value)) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid + radius - tw/2.0,
@@ -391,11 +417,12 @@ void ControlArea::paintEvent(QPaintEvent* event)
     }
 
     // PID
-    if (pidSet) {
+    //if (pidSet) {
+    if (data) {
         // PID X
         painter.setPen(QColor(Qt::black));
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(P[0], 'f', 2) + "%";
+        text = QString::number(data->getCurrentRecord().pid[PID_PITCH].P, 'f', 2) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid - mid/2.0 - tw/2.0,
@@ -403,7 +430,7 @@ void ControlArea::paintEvent(QPaintEvent* event)
 
         painter.setPen(QColor(Qt::black));
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(I[0], 'f', 2) + "%";
+        text = QString::number(data->getCurrentRecord().pid[PID_PITCH].I, 'f', 2) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid - tw/2.0,
@@ -411,7 +438,7 @@ void ControlArea::paintEvent(QPaintEvent* event)
 
         painter.setPen(QColor(Qt::black));
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(D[0], 'f', 2) + "%";
+        text = QString::number(data->getCurrentRecord().pid[PID_PITCH].D, 'f', 2) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid + mid/2.0 - tw/2.0,
@@ -420,7 +447,7 @@ void ControlArea::paintEvent(QPaintEvent* event)
         // PID Y
         painter.setPen(QColor(Qt::black));
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(P[1], 'f', 2) + "%";
+        text = QString::number(data->getCurrentRecord().pid[PID_ROLL].P, 'f', 2) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid - tw/2.0,
@@ -428,7 +455,7 @@ void ControlArea::paintEvent(QPaintEvent* event)
 
         painter.setPen(QColor(Qt::black));
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(I[1], 'f', 2) + "%";
+        text = QString::number(data->getCurrentRecord().pid[PID_ROLL].I, 'f', 2) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid - tw/2.0,
@@ -436,7 +463,7 @@ void ControlArea::paintEvent(QPaintEvent* event)
 
         painter.setPen(QColor(Qt::black));
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(D[1], 'f', 2) + "%";
+        text = QString::number(data->getCurrentRecord().pid[PID_ROLL].D, 'f', 2) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid - tw/2.0,
@@ -445,7 +472,7 @@ void ControlArea::paintEvent(QPaintEvent* event)
         // PID Z
         painter.setPen(QColor(Qt::black));
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(P[2], 'f', 2) + "%";
+        text = QString::number(data->getCurrentRecord().pid[PID_YAW].P, 'f', 2) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid + mid/6.0 - tw/2.0,
@@ -453,7 +480,7 @@ void ControlArea::paintEvent(QPaintEvent* event)
 
         painter.setPen(QColor(Qt::black));
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(I[2], 'f', 2) + "%";
+        text = QString::number(data->getCurrentRecord().pid[PID_YAW].I, 'f', 2) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid - mid/6.0 - tw/2.0,
@@ -461,7 +488,7 @@ void ControlArea::paintEvent(QPaintEvent* event)
 
         painter.setPen(QColor(Qt::black));
         painter.setFont(QFont("MS Shell Dlg 2", size/50));
-        text = QString::number(D[2], 'f', 2) + "%";
+        text = QString::number(data->getCurrentRecord().pid[PID_YAW].D, 'f', 2) + "%";
         tw = painter.fontMetrics().width(text);
         th = painter.fontMetrics().height();
         painter.drawText(width()/2.0 + mid + mid/6.0 - tw/2.0,
@@ -471,11 +498,14 @@ void ControlArea::paintEvent(QPaintEvent* event)
 
 
     // Feedback Yaw
-    painter.setBrush(QBrush(QColor(100, 100, 255), Qt::SolidPattern));
-    painter.setPen(QColor(100, 100, 255));
-    rect.setRect(width()/2 - fbYaw * size /600 - 2, height()/2 - 14,
-                 4, 28);
-    painter.drawRect(rect);
+    if (data) {
+        value = data->getCurrentRecord().rcYaw;
+        painter.setBrush(QBrush(QColor(100, 100, 255), Qt::SolidPattern));
+        painter.setPen(QColor(100, 100, 255));
+        rect.setRect(width()/2 - value * size /60 - 2, height()/2 - 14,
+                     4, 28);
+        painter.drawRect(rect);
+    }
 
     // Sent Yaw
     painter.setBrush(Qt::NoBrush);
@@ -484,10 +514,12 @@ void ControlArea::paintEvent(QPaintEvent* event)
                      width()/2 - yaw * size /600, height()/2 + 12);
 
     // Feedback Pitch & Roll
-    painter.setBrush(QBrush(QColor(100, 100, 255), Qt::SolidPattern));
-    painter.setPen(QColor(100, 100, 255));
-    painter.drawEllipse(width()/2 + fbRoll * size /600 - 5,
-                        height()/2 + fbPitch * size /600 - 5, 10, 10);
+    if (data) {
+        painter.setBrush(QBrush(QColor(100, 100, 255), Qt::SolidPattern));
+        painter.setPen(QColor(100, 100, 255));
+        painter.drawEllipse(width()/2 + data->getCurrentRecord().rcRoll * size /60 - 5,
+                            height()/2 + data->getCurrentRecord().rcPitch * size /60 - 5, 10, 10);
+    }
 
     // Sent Pitch & Roll
     painter.setBrush(Qt::NoBrush);

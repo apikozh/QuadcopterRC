@@ -69,6 +69,8 @@ struct LogMsgText : LogMsg {
 
 struct LogMsg1 : LogMsg {
 	// Level 1
+    bool armed;
+    double fullInterval;
 	double rcThrottle, rcPitch, rcRoll, rcYaw;
 	double pitch, roll, yaw;
 	
@@ -76,7 +78,7 @@ struct LogMsg1 : LogMsg {
 
 struct LogMsg2 : LogMsg1 {
 	// Level 2
-	double interval;
+	double lastInterval;
 	double motorFL, motorFR, motorBL, motorBR;
 	double P[3], I[3], D[3];
 	

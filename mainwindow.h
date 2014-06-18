@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 #include <QUdpSocket>
+#include "tracelogstore.h"
+#include "pidgraphdata.h"
 
 namespace Ui {
 class MainWindow;
@@ -24,6 +26,9 @@ private:
     QHostAddress copterAddr;
     quint16 copterPort;
 
+    TraceLogStore traceLog;
+    PIDGraphData* pidGraphData;
+
 private slots:
     void onSocketRead();
     void on_btnTerminate_clicked();
@@ -33,6 +38,7 @@ private slots:
     void on_btnCalibrateAccel_clicked();
     void on_btnSetPID_clicked();
     void on_btnSetLogCfg_clicked();
+    void on_horizontalSlider_2_valueChanged(int value);
 };
 
 #endif // MAINWINDOW_H

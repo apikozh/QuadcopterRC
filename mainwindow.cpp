@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 
 #include "msg.h"
+#include "pidgraphdata.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -17,22 +18,18 @@ MainWindow::MainWindow(QWidget *parent) :
     //socket.bind()
     connect(&socket, SIGNAL(readyRead()), this, SLOT(onSocketRead()));
 
+    traceLog.setMaxSize(100);
+
     ui->controlArea->setMain(this);
+    ui->controlArea->setData(&traceLog);
     ui->tabWidget->setCurrentIndex(0);
 
-    /*ui->controlArea->setDebugData(
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0);*/
-
+    pidGraphData = new PIDGraphData(&traceLog, PID_PITCH);
+    ui->pidXGraph->graph()->setData(pidGraphData);
+    ui->pidXGraph->setXScaleBounds(0.01, 10.0);
+    ui->pidXGraph->setYScaleBounds(0.01, 10.0);
+    ui->pidXGraph->graph()->setIntervalScale(1000);
+    //ui->pidXGraph->graph()->setVariableInterval(true);
 }
 
 MainWindow::~MainWindow()
@@ -57,6 +54,25 @@ void MainWindow::setControlParams(int throttle, int pitch, int roll, int yaw)
         qDebug() << QString().sprintf(
             "Send: T: %d, P: %d, R: %d, Y: %d",
             throttle, ctrl.pitch, ctrl.roll, ctrl.yaw);
+
+    LogMsg4 log;
+    log.logLevel = 2;
+    log.fullInterval = rand()*1.0/RAND_MAX/1000.0;
+    log.P[0] = pitch/5.0;
+    log.I[0] = roll/5.0;
+    log.D[0] = yaw/5.0;
+    log.pitch = pitch/10.0;
+    log.roll = roll/10.0;
+    log.yaw = yaw/10.0;
+    log.rcPitch = pitch/10.0;
+    log.rcRoll = roll/10.0;
+    log.rcYaw = yaw/10.0;
+    log.rcThrottle = throttle/10.0;
+    log.motorFL = throttle/10.0 + pitch/100.0 + roll/100.0;
+    log.motorFR = throttle/10.0 + pitch/100.0 - roll/100.0;
+    log.motorBL = throttle/10.0 - pitch/100.0 + roll/100.0;
+    log.motorBR = throttle/10.0 - pitch/100.0 - roll/100.0;
+    traceLog.addMessage(&log);
 }
 
 void MainWindow::onSocketRead()
@@ -69,7 +85,7 @@ void MainWindow::onSocketRead()
     char* text;
     LogMsg4* msg = (LogMsg4*)buf;
     int len = socket.readDatagram(buf, 500);
-    switch (((LogMsg*)buf)->logLevel) {
+    switch (msg->logLevel) {
         case 0:
             text = &((LogMsgText*)buf)->text;
             text[len-1] = 0;
@@ -94,7 +110,12 @@ void MainWindow::onSocketRead()
                     msg->I,
                     msg->D
             );
-            ui->groupBox->setTitle(QString::number((int)(msg->interval*1000000)));
+            ui->groupBox->setTitle(QString::number((int)(msg->lastInterval*1000000)));
+            if (msg->armed && ui->btnArm->styleSheet().isEmpty()) {
+                ui->btnArm->setStyleSheet("QPushButton {\nbackground-color: qlineargradient(spread:pad, x1:0, y1:1, x2:0, y2:0, stop:0 rgba(170, 255, 0, 255), stop:1 rgba(0, 255, 0, 255));}");
+            }else if (!msg->armed && !ui->btnArm->styleSheet().isEmpty()){
+                ui->btnArm->setStyleSheet("");
+            }
             break;
         case 1:
             ui->controlArea->setDebugData(
@@ -106,6 +127,11 @@ void MainWindow::onSocketRead()
                         msg->roll*10,
                         msg->yaw*10
                 );
+            if (msg->armed && ui->btnArm->styleSheet().isEmpty()) {
+                ui->btnArm->setStyleSheet("QPushButton {\nbackground-color: qlineargradient(spread:pad, x1:0, y1:1, x2:0, y2:0, stop:0 rgba(170, 255, 0, 255), stop:1 rgba(0, 255, 0, 255));}");
+            }else if (!msg->armed && !ui->btnArm->styleSheet().isEmpty()){
+                ui->btnArm->setStyleSheet("");
+            }
             //qDebug() << "Receive log message";
             break;
         default:
@@ -138,6 +164,7 @@ void MainWindow::on_btnArm_clicked()
     }else{
         ui->log->appendPlainText("Error sending control message");
     }
+    traceLog.setFrozen(false);
 }
 
 void MainWindow::on_btnDisarm_clicked()
@@ -151,6 +178,7 @@ void MainWindow::on_btnDisarm_clicked()
     }else{
         ui->log->appendPlainText("Error sending control message");
     }
+    traceLog.setFrozen(true);
 }
 
 void MainWindow::on_btnCalibrateGyro_clicked()
@@ -229,4 +257,24 @@ void MainWindow::on_btnSetLogCfg_clicked()
     }else{
         ui->log->appendPlainText("Error sending control message");
     }
+}
+
+void MainWindow::on_horizontalSlider_2_valueChanged(int value)
+{
+    LogMsg4 log;
+    log.logLevel = 2;
+    log.armed = value > 50;
+    log.fullInterval = rand()*1.0/RAND_MAX/1000.0;
+    log.P[0] = value/2.0;
+    log.I[0] = 0;
+    log.D[0] = 0;
+    traceLog.addMessage(&log);
+
+    if (log.armed && ui->btnArm->styleSheet().isEmpty()) {
+        ui->btnArm->setStyleSheet("QPushButton {\nbackground-color: qlineargradient(spread:pad, x1:0, y1:1, x2:0, y2:0, stop:0 rgba(170, 255, 0, 255), stop:1 rgba(0, 255, 0, 255));}");
+    }else if (!log.armed && !ui->btnArm->styleSheet().isEmpty()){
+        ui->btnArm->setStyleSheet("");
+    }
+
+
 }

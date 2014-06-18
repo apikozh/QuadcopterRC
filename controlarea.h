@@ -2,6 +2,7 @@
 #define CONTROLAREA_H
 
 #include "mainwindow.h"
+#include "tracelogstore.h"
 
 #include <QWidget>
 #include <QWheelEvent>
@@ -21,6 +22,7 @@ public:
     ~ControlArea();
 
     void setMain(MainWindow* main);
+    void setData(TraceLogStore* data);
     void setDebugData(int fbThrottle, int fbPitch,
         int fbRoll, int fbYaw, int rPitch, int rRoll, int rYaw,
         int motorFL = -1, int motorFR = -1, int motorBL = -1, int motorBR = -1,
@@ -29,6 +31,7 @@ public:
 private:
     Ui::ControlArea *ui;
     MainWindow* main;
+    TraceLogStore* data;
     int throttle, pitch, roll, yaw;
     int fbThrottle, fbPitch, fbRoll, fbYaw;
     int rPitch, rRoll, rYaw;
@@ -46,6 +49,7 @@ private:
 
 private slots:
     void sendRCData();
+    void onDataChanged();
 
 };
 
