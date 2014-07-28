@@ -574,3 +574,68 @@ void ControlArea::mouseReleaseEvent(QMouseEvent* event) {
     //main->setControlParams(throttle, pitch, roll, yaw);
     update();
 }
+
+void ControlArea::keyPressEvent(QKeyEvent* event)
+{
+    int value = 100;
+    if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+        value *= 2;
+    }else if (event->modifiers().testFlag(Qt::ControlModifier)) {
+        value /= 2;
+    }
+    switch (event->key()) {
+        case Qt::Key_Up:
+            pitch = -value;
+            break;
+        case Qt::Key_Down:
+            pitch = value;
+            break;
+        case Qt::Key_Right:
+            roll = value;
+            break;
+        case Qt::Key_Left:
+            roll = -value;
+            break;
+    case Qt::Key_A:
+        yaw = value*2.5;
+        break;
+    case Qt::Key_D:
+        yaw = -value*2.5;
+        break;
+    case Qt::Key_W:
+        throttle += 10;
+        throttle = constrain(throttle, 0, 1000);
+        break;
+    case Qt::Key_S:
+        throttle -= 10;
+        throttle = constrain(throttle, 0, 1000);
+        break;
+    case Qt::Key_Space:
+        throttle = 0;
+        //throttle = constrain(throttle, 0, 1000);
+        break;
+    }
+    dataChanged = true;
+    update();
+}
+
+void ControlArea::keyReleaseEvent(QKeyEvent *event)
+{
+    switch (event->key()) {
+        case Qt::Key_Up:case Qt::Key_Down:
+            pitch = 0;
+            break;
+    case Qt::Key_Right:case Qt::Key_Left:
+        roll = 0;
+        break;
+    case Qt::Key_A: case Qt::Key_D:
+        yaw = 0;
+        break;
+    case Qt::Key_W:
+        break;
+    case Qt::Key_S:
+        break;
+    }
+    dataChanged = true;
+    update();
+}

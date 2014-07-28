@@ -5,6 +5,8 @@
 #include <QUdpSocket>
 #include "tracelogstore.h"
 #include "pidgraphdata.h"
+#include "accelgraphdata.h"
+#include "gyrographdata.h"
 
 namespace Ui {
 class MainWindow;
@@ -27,10 +29,17 @@ private:
     quint16 copterPort;
 
     TraceLogStore traceLog;
-    PIDGraphData* pidGraphData;
+    PIDGraphData* pidXGraphData;
+    PIDGraphData* pidYGraphData;
+    PIDGraphData* pidZGraphData;
+    AccelGraphData* accelGraphData;
+    GyroGraphData* gyroGraphData;
+    AccelGraphData* accelRAWGraphData;
+    GyroGraphData* gyroRAWGraphData;
 
 private slots:
     void onSocketRead();
+    void onTraceLogDataChanged();
     void on_btnTerminate_clicked();
     void on_btnArm_clicked();
     void on_btnDisarm_clicked();
@@ -38,7 +47,7 @@ private slots:
     void on_btnCalibrateAccel_clicked();
     void on_btnSetPID_clicked();
     void on_btnSetLogCfg_clicked();
-    void on_horizontalSlider_2_valueChanged(int value);
+    void on_traceLogScroller_valueChanged(int value);
 };
 
 #endif // MAINWINDOW_H

@@ -20,6 +20,8 @@ public:
 
     void setXScaleBounds(float min, float max);
     void setYScaleBounds(float min, float max);
+    void setXScale(float value);
+    void setYScale(float value);
 
 private slots:
     void onScrollChanged();

@@ -4,8 +4,10 @@
 
 TraceLogStore::TraceLogStore()
 {
-    offset = index = maxSize = 0;
-    fullLoop = frozen = false;
+    index = -1;
+    offset = maxSize = 0;
+    frozen = false;
+    saveToFile = false;
     storedInterval = 0;
     memset(&currentRecord, 0, sizeof(LogRecord));
 }
@@ -50,24 +52,45 @@ void TraceLogStore::addMessage(LogMsg4* msg)
     }
 
     if (!frozen) {
-        if (maxSize) {
-            if (fullLoop)
-                storedInterval -= values[index].fullInterval;
-            values[index] = currentRecord;
-            if (++index >= maxSize) {
-                index = 0;
-                fullLoop = true;
-            }
-        }else{
+        index++;
+        if (!maxSize || values.size() < maxSize) {
             values.push_back(currentRecord);
-            index = values.size();
+            //index++;// = values.size()-1;
+        }else{
+            index %= maxSize;
+            storedInterval -= values[index].fullInterval;
+            values[index] = currentRecord;
         }
         storedInterval += currentRecord.fullInterval;
 
         emit dataChanged();
+
+        if (saveToFile) {
+            out << currentRecord.gyro[0] << "\t";
+            out << currentRecord.gyro[1] << "\t";
+            out << currentRecord.gyro[2] << "\t";
+            out << currentRecord.accel[0] << "\t";
+            out << currentRecord.accel[1] << "\t";
+            out << currentRecord.accel[2] << "\t";
+            out << currentRecord.fGyro[0] << "\t";
+            out << currentRecord.fGyro[1] << "\t";
+            out << currentRecord.fGyro[2] << "\t";
+            out << currentRecord.fAccel[0] << "\t";
+            out << currentRecord.fAccel[1] << "\t";
+            out << currentRecord.fAccel[2] << "\n";
+        }
     }
 
+
     emit recordChanged();
+}
+
+void TraceLogStore::setFile(QString fileName)
+{
+    saveToFile = true;
+    file.setFileName(fileName);
+    file.open(QIODevice::WriteOnly | QIODevice::Text);
+    out.setDevice(&file);
 }
 
 void TraceLogStore::setMaxSize(int size)
@@ -75,7 +98,8 @@ void TraceLogStore::setMaxSize(int size)
     if (size >= 0 && maxSize != size) {
         clear();
         maxSize = size;
-        values.resize(size);
+        if (size > 0)
+            values.reserve(size);
     }
 }
 
@@ -101,10 +125,7 @@ int TraceLogStore::getOffset()
 
 int TraceLogStore::getFullSize()
 {
-    if (maxSize) {
-        return fullLoop ? maxSize : index;
-    }else
-        return values.size();
+    return values.size();
 }
 
 double TraceLogStore::getStoredInterval()
@@ -115,11 +136,9 @@ double TraceLogStore::getStoredInterval()
 void TraceLogStore::clear()
 {
     memset(&currentRecord, 0, sizeof(LogRecord));
-    if (0 == maxSize) {
-        values.clear();
-    }
-    offset = index = 0;
-    fullLoop = false;
+    values.clear();
+    offset = 0;
+    index = -1;
     storedInterval = 0;
     emit dataChanged();
     emit recordChanged();
@@ -127,12 +146,16 @@ void TraceLogStore::clear()
 
 void TraceLogStore::setFrozen(bool value)
 {
-    frozen = value;
+    if (frozen != value) {
+        frozen = value;
+        out << (frozen ? "frozen\n" : "unfrozen\n");
+        out.flush();
+    }
 }
 
 const LogRecord& TraceLogStore::getRecord(int index) const
 {
-    int idx = this->index - 1 - offset - index;
+    int idx = this->index - offset - index;
     if (maxSize && idx < 0)
         idx += maxSize;
     return values[idx];

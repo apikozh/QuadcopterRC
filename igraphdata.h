@@ -10,6 +10,7 @@ class IGraphData : public QObject
 public:
     virtual int getSize() = 0;
     virtual int getSeriesNumber() = 0;
+    virtual QString getSeriesName(int seriesIndex) = 0;
     virtual double getFullInterval() = 0;
     virtual float getInterval(int index) = 0;
     virtual float getValue(int index, int seriesIndex) = 0;

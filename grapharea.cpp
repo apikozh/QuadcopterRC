@@ -142,15 +142,14 @@ void GraphArea::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
 
-    if (data) {
-
-        int size = data->getSize();
-        int beginIndex, endIndex;
+    int size, beginIndex, endIndex;
+    double beginTime = xScroll/intervalScale/xScale;
+    double endTime = (xScroll + getScrollPage())/intervalScale/xScale;
+    double fTime, time;
+    if (data && (size = data->getSize()) > 1) {
         QPointF* polyline;
         if (variableInterval) {
-            double beginTime = xScroll/intervalScale/xScale;
-            double endTime = (xScroll + getScrollPage())/intervalScale/xScale;
-            double fTime = 0, time = 0;
+            fTime = time = 0;
             for (beginIndex=0; beginIndex<size-1 && time <= beginTime; beginIndex++) {
                 fTime = time;
                 time += data->getInterval(beginIndex);
@@ -160,7 +159,7 @@ void GraphArea::paintEvent(QPaintEvent *event)
             for (endIndex = beginIndex; endIndex<size-1 && time < endTime; endIndex++) {
                 time += data->getInterval(endIndex);
             }
-            qDebug() << beginIndex << endIndex << size;
+            //qDebug() << beginIndex << endIndex << size;
             if (endIndex - beginIndex > 0) {
                 size = endIndex - beginIndex + 1;
                 polyline = new QPointF[size];
@@ -226,6 +225,77 @@ void GraphArea::paintEvent(QPaintEvent *event)
     }
 
     painter.setPen(Qt::black);
+    painter.drawRect(0, 0, width()-1, height()-1);
+
+    int x, y, p, p1, p2, p5;
+    QString text;
+
+    p1 = ceil(log(30/yScale/1)/log(10.0));
+    p2 = ceil(log(30/yScale/2)/log(10.0));
+    p5 = ceil(log(30/yScale/5)/log(10.0));
+    p = p5;
+    x = 5;
+    if (p >= p2) {
+        p = p2;
+        x = 2;
+    }
+    if (p >= p1) {
+        p = p1;
+        x = 1;
+    }
+    time = pow(10.0, p)*x;
+
+    p = -p;
+    if (p < 0)
+        p = 0;
+    size = height()/2.0/(time*yScale) + 2;
+    for (int i=1; i<size; i++) {
+        y = i*time * yScale;
+        painter.drawLine(width()-1 -5, height()/2-y, width()-1, height()/2-y);
+        painter.drawLine(width()-1 -5, height()/2+y, width()-1, height()/2+y);
+        text = QString::number(i*time, 'f', p);
+        painter.drawText(
+                    width()-1 -8 - painter.fontMetrics().width(text),
+                    height()/2.0 - y + painter.fontMetrics().height()/2.0-2, text);
+        text = QString::number(-i*time, 'f', p);
+        painter.drawText(
+                    width()-1 -8 - painter.fontMetrics().width(text),
+                    height()/2.0 + y + painter.fontMetrics().height()/2.0-2, text);
+    }
+
+    if (variableInterval) {
+        p1 = ceil(log(50/intervalScale/xScale/1)/log(10.0));
+        p2 = ceil(log(50/intervalScale/xScale/2)/log(10.0));
+        p5 = ceil(log(50/intervalScale/xScale/5)/log(10.0));
+        p = p5;
+        x = 5;
+        if (p >= p2) {
+            p = p2;
+            x = 2;
+        }
+        if (p >= p1) {
+            p = p1;
+            x = 1;
+        }
+        time = pow(10.0, p)*x;
+
+        p = -p;
+        if (p < 0)
+            p = 0;
+        fTime = ((int)(beginTime/time))*time;
+        size = (endTime - beginTime)/time + 1;
+        for (int i=0; i<size; i++) {
+            x = width()-1 - (fTime - beginTime + i*time) * intervalScale * xScale;
+            painter.drawLine(x, height()/2-5, x, height()/2+5);
+            text = QString::number(fTime + i*time, 'f', p);
+            painter.drawText(
+                        x - painter.fontMetrics().width(text)/2,
+                        height()/2-8, text);
+        }
+    }else{
+
+    }
+
     painter.drawLine(QPointF(0, height()/2), QPointF(width(), height()/2));
 
 

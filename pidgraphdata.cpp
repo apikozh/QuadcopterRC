@@ -17,6 +17,16 @@ int PIDGraphData::getSeriesNumber()
     return 3;
 }
 
+QString PIDGraphData::getSeriesName(int seriesIndex)
+{
+    switch (seriesIndex) {
+        case 0: return "P";
+        case 1: return "I";
+        case 2: return "D";
+        default: return "";
+    }
+}
+
 double PIDGraphData::getFullInterval()
 {
     return data->getStoredInterval();

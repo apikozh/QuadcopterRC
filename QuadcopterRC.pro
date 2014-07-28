@@ -18,7 +18,9 @@ SOURCES += main.cpp\
     grapharea.cpp \
     graphwidget.cpp \
     tracelogstore.cpp \
-    pidgraphdata.cpp
+    pidgraphdata.cpp \
+    accelgraphdata.cpp \
+    gyrographdata.cpp
 
 HEADERS  += mainwindow.h \
     controlarea.h \
@@ -26,7 +28,9 @@ HEADERS  += mainwindow.h \
     graphwidget.h \
     tracelogstore.h \
     igraphdata.h \
-    pidgraphdata.h
+    pidgraphdata.h \
+    accelgraphdata.h \
+    gyrographdata.h
 
 FORMS    += mainwindow.ui \
     controlarea.ui \

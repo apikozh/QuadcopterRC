@@ -1,19 +1,19 @@
-#ifndef PIDGRAPHDATA_H
-#define PIDGRAPHDATA_H
+#ifndef GYROGRAPHDATA_H
+#define GYROGRAPHDATA_H
 
 #include "igraphdata.h"
 #include "tracelogstore.h"
 
-class PIDGraphData : public IGraphData
+class GyroGraphData : public IGraphData
 {
     Q_OBJECT
 
 private:
     TraceLogStore* data;
-    PIDAxis axis;
+    bool filtered;
 
 public:
-    PIDGraphData(TraceLogStore* data, PIDAxis axis);
+    explicit GyroGraphData(TraceLogStore *data, bool filtered = true);
 
     virtual int getSize();
     virtual int getSeriesNumber();
@@ -27,4 +27,4 @@ private slots:
 
 };
 
-#endif // PIDGRAPHDATA_H
+#endif // GYROGRAPHDATA_H

@@ -1,20 +1,20 @@
-#ifndef PIDGRAPHDATA_H
-#define PIDGRAPHDATA_H
+#ifndef ACCELGRAPHDATA_H
+#define ACCELGRAPHDATA_H
 
 #include "igraphdata.h"
 #include "tracelogstore.h"
 
-class PIDGraphData : public IGraphData
+class AccelGraphData : public IGraphData
 {
     Q_OBJECT
 
 private:
     TraceLogStore* data;
-    PIDAxis axis;
+    bool filtered;
 
 public:
-    PIDGraphData(TraceLogStore* data, PIDAxis axis);
-
+    explicit AccelGraphData(TraceLogStore* data, bool filtered = true);
+        
     virtual int getSize();
     virtual int getSeriesNumber();
     virtual QString getSeriesName(int seriesIndex);
@@ -27,4 +27,4 @@ private slots:
 
 };
 
-#endif // PIDGRAPHDATA_H
+#endif // SENSORSGRAPHDATA_H

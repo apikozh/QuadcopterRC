@@ -1,10 +1,11 @@
-#ifndef DATASTORE_H
-#define DATASTORE_H
+#ifndef TRACELOGSTORE_H
+#define TRACELOGSTORE_H
 
 #include <QObject>
 #include <QFile>
 #include <QVector>
 #include <QTime>
+#include <QTextStream>
 #include "msg.h"
 
 struct LogSegment {
@@ -39,15 +40,16 @@ private:
     QVector<LogRecord> values;
     LogRecord currentRecord;
     double storedInterval;
-    bool fullLoop, frozen;
+    bool frozen;
     //QVector<LogSegment> segments;
-    //QFile file;
-    //bool saveToFile;
+    QFile file;
+    QTextStream out;
+    bool saveToFile;
 
 public:
     TraceLogStore();
     void addMessage(LogMsg4* msg);
-    //void setFile(QFile file);
+    void setFile(QString fileName);
     void setMaxSize(int size);
     int getSize();
     void setOffset(int value);
